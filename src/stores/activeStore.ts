@@ -2,11 +2,10 @@ import { create } from 'zustand'
 import { Timestamp } from 'firebase/firestore'
 import type { ActiveList, TaskList, TaskCompletion } from '@/types'
 import {
-  addUserDocument,
+  setUserDocument,
   updateUserDocument,
   deleteUserDocument,
   subscribeToUserDocument,
-  getUserDocument,
 } from '@/services/firestore'
 
 interface ActiveState {
@@ -68,14 +67,8 @@ export const useActiveStore = create<ActiveState>((set, get) => ({
         lastResetDate: today,
       }
 
-      // Check if there's already an active list
-      const existing = await getUserDocument(userId, 'active', 'current')
-      if (existing) {
-        await updateUserDocument(userId, 'active', 'current', activeData)
-      } else {
-        // Create with specific ID 'current'
-        await addUserDocument(userId, 'active', { ...activeData, id: 'current' })
-      }
+      // Set the active list document with the specific ID 'current'
+      await setUserDocument(userId, 'active', 'current', activeData)
     } catch (error) {
       set({ error: (error as Error).message })
       throw error

@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   getDoc,
@@ -35,6 +36,21 @@ export async function addUserDocument<T extends DocumentData>(
 ) {
   const collectionRef = getUserCollection(userId, collectionName)
   return addDoc(collectionRef, {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+}
+
+// Set a document with a specific ID (create or overwrite)
+export async function setUserDocument<T extends DocumentData>(
+  userId: string,
+  collectionName: string,
+  docId: string,
+  data: T
+) {
+  const docRef = getUserDoc(userId, collectionName, docId)
+  return setDoc(docRef, {
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
