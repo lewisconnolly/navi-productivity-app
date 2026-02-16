@@ -39,7 +39,7 @@ export function SignupPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary mb-2">Navi</h1>
+          <h1 className="text-3xl font-bold text-primary mb-2" style={{ fontFamily: "'Crete Round', serif", fontStyle: 'italic' }}>Navi</h1>
           <p className="text-text-secondary">Create your account</p>
         </div>
 
