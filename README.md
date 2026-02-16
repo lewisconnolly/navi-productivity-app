@@ -33,3 +33,8 @@ npm run dev
 npm run build
 npm run preview
 ```
+
+## To do
+- [] Make task list scrollable when tasks overflow viewport
+- [] Multiple active lists
+- [] Collaborative lists
