@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-icons": "pwa-assets-generator --preset minimal-2023 public/icon.svg"
+    "generate-icons": "pwa-assets-generator"
   },
   "dependencies": {
     "firebase": "^12.9.0",
