@@ -46,5 +46,5 @@ npm run generate-icons
 
 ## To do
 - [x] Make task list scrollable when tasks overflow viewport
-- [] Multiple active lists
-- [] Collaborative lists
+- [ ] Multiple active lists
+- [ ] Collaborative lists
