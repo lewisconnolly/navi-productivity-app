@@ -52,6 +52,7 @@ export function ListEditor({
   }
 
   return (
+    <div>
     <div className="space-y-6">
       {/* Title */}
       <div>
@@ -138,8 +139,10 @@ export function ListEditor({
         </form>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-2 pt-4 border-t border-border">
+    </div>
+
+      {/* Actions — sticky at bottom of scroll container */}
+      <div className="flex gap-2 pt-4 mt-6 border-t border-border sticky bottom-0 bg-bg-primary -mx-4 px-4 pb-1">
         <Button
           variant="danger"
           onClick={() => setShowDeleteConfirm(true)}
@@ -185,3 +188,4 @@ export function ListEditor({
     </div>
   )
 }
+

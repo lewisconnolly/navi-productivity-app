@@ -63,11 +63,12 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       <div
         className={`
           w-full ${sizeStyles[size]} bg-bg-primary rounded-xl shadow-xl
+          flex flex-col max-h-[90svh]
           animate-in zoom-in-95 duration-200
         `}
       >
         {title && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <h2 className="text-lg font-semibold">{title}</h2>
             <button
               onClick={onClose}
@@ -79,7 +80,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             </button>
           </div>
         )}
-        <div className="p-4">{children}</div>
+        <div className="p-4 overflow-y-auto">{children}</div>
       </div>
     </div>,
     document.body
