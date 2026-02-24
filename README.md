@@ -34,6 +34,16 @@ npm run build
 npm run preview
 ```
 
+## Icons
+
+PWA icons (favicon, Android home screen, iOS touch icon) are generated from `public/icon.svg`.
+
+To update the icon design, edit `public/icon.svg` then run:
+
+```bash
+npm run generate-icons
+```
+
 ## To do
 - [] Make task list scrollable when tasks overflow viewport
 - [] Multiple active lists
