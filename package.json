@@ -8,9 +8,16 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-icons": "pwa-assets-generator"
+    "generate-icons": "pwa-assets-generator",
+    "cap:sync": "npx cap sync",
+    "cap:open:android": "npx cap open android",
+    "cap:build:android": "npm run build && npx cap sync && npx cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "cap": "^0.2.1",
     "firebase": "^12.9.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
