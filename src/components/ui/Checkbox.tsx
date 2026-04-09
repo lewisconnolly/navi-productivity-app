@@ -5,17 +5,18 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'typ
 }
 
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ label, className = '', checked, id, ...props }, ref) => {
+  ({ label, className = '', checked, id, disabled, ...props }, ref) => {
     const checkboxId = id || label?.toLowerCase().replace(/\s+/g, '-')
 
     return (
-      <label htmlFor={checkboxId} className={`inline-flex items-center gap-2 cursor-pointer ${className}`}>
+      <label htmlFor={checkboxId} className={`inline-flex items-center gap-2 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${className}`}>
         <div className="relative flex items-center justify-center">
           <input
             ref={ref}
             type="checkbox"
             id={checkboxId}
             checked={checked}
+            disabled={disabled}
             className="peer sr-only"
             {...props}
           />
@@ -41,7 +42,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           </div>
         </div>
         {label && (
-          <span className="text-sm select-none">{label}</span>
+          <span className={`text-sm select-none ${disabled ? 'text-text-muted' : ''}`}>{label}</span>
         )}
       </label>
     )

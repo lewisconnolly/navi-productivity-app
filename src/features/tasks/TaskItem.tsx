@@ -7,9 +7,10 @@ interface TaskItemProps {
   onUpdate: (taskId: string, data: Partial<Task>) => void
   onDelete: (taskId: string) => void
   isEditing?: boolean
+  dragHandleListeners?: Record<string, unknown>
 }
 
-export function TaskItem({ task, onUpdate, onDelete, isEditing }: TaskItemProps) {
+export function TaskItem({ task, onUpdate, onDelete, isEditing, dragHandleListeners }: TaskItemProps) {
   const [editTitle, setEditTitle] = useState(task.title)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
 
@@ -23,10 +24,13 @@ export function TaskItem({ task, onUpdate, onDelete, isEditing }: TaskItemProps)
   }
 
   return (
-    <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-bg-secondary group">
+    <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-bg-secondary">
       {/* Drag handle - only shown when editing */}
       {isEditing && (
-        <div className="cursor-grab text-text-muted opacity-0 group-hover:opacity-100 transition-opacity">
+        <div
+          className="cursor-grab touch-none text-text-muted"
+          {...dragHandleListeners}
+        >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
           </svg>
@@ -63,6 +67,7 @@ export function TaskItem({ task, onUpdate, onDelete, isEditing }: TaskItemProps)
       {/* Reset daily toggle */}
       {isEditing && (
         <button
+          type="button"
           onClick={() => onUpdate(task.id, { resetDaily: !task.resetDaily })}
           title={task.resetDaily ? 'Resets daily' : 'Does not reset'}
           className={`
@@ -82,8 +87,9 @@ export function TaskItem({ task, onUpdate, onDelete, isEditing }: TaskItemProps)
       {/* Delete button */}
       {isEditing && (
         <button
+          type="button"
           onClick={() => onDelete(task.id)}
-          className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

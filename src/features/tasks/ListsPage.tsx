@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuthStore, useListStore, useActiveStore } from '@/stores'
 import { AppShell } from '@/components/layout'
 import { Button, Modal, toast } from '@/components/ui'
-import type { TaskList, CreateTask, Task } from '@/types'
+import type { TaskList, Task, CreateTask } from '@/types'
 import { ListCard } from './ListCard'
 import { CreateListModal } from './CreateListModal'
 import { ListEditor } from './ListEditor'
@@ -10,16 +10,21 @@ import { ListEditor } from './ListEditor'
 export function ListsPage() {
   const { user } = useAuthStore()
   const { lists, isLoading, createList, updateList, deleteList, addTask, updateTask, deleteTask } = useListStore()
-  const { activeList, activateList } = useActiveStore()
+  const { activeList, activateList, deactivateList } = useActiveStore()
 
   const [showCreate, setShowCreate] = useState(false)
   const [editingList, setEditingList] = useState<TaskList | null>(null)
 
-  async function handleCreate(title: string, duration: number) {
+  async function handleCreate(title: string, duration: number, tasks: Task[], activate: boolean) {
     if (!user) return
     try {
-      await createList(user.uid, { title, duration, tasks: [] })
-      toast.success('List created!')
+      const newListId = await createList(user.uid, { title, duration, tasks })
+      if (activate) {
+        await activateList(user.uid, { id: newListId, title, duration, tasks, createdAt: new Date(), updatedAt: new Date() })
+        toast.success('List created and activated!')
+      } else {
+        toast.success('List created!')
+      }
     } catch {
       toast.error('Failed to create list')
     }
@@ -29,8 +34,8 @@ export function ListsPage() {
     if (!user || !editingList) return
     try {
       await updateList(user.uid, editingList.id, data)
-      // Update local state to reflect changes
-      setEditingList({ ...editingList, ...data })
+      // Update local state to reflect changes, but only if modal is still open
+      setEditingList((prev) => prev ? { ...prev, ...data } : null)
     } catch {
       toast.error('Failed to update list')
     }
@@ -60,7 +65,15 @@ export function ListsPage() {
   async function handleDeleteTask(taskId: string) {
     if (!user || !editingList) return
     try {
+      const isActive = activeList?.listId === editingList.id
+      const currentTasks = lists.find((l) => l.id === editingList.id)?.tasks ?? []
+      const willBeEmpty = currentTasks.filter((t) => t.id !== taskId).length === 0
+
       await deleteTask(user.uid, editingList.id, taskId)
+
+      if (isActive && willBeEmpty) {
+        await deactivateList(user.uid)
+      }
     } catch {
       toast.error('Failed to delete task')
     }
@@ -71,6 +84,19 @@ export function ListsPage() {
     try {
       await deleteList(user.uid, editingList.id)
       setEditingList(null)
+      toast.success('List deleted')
+    } catch {
+      toast.error('Failed to delete list')
+    }
+  }
+
+  async function handleDeleteListById(list: TaskList) {
+    if (!user) return
+    try {
+      if (activeList?.listId === list.id) {
+        await deactivateList(user.uid)
+      }
+      await deleteList(user.uid, list.id)
       toast.success('List deleted')
     } catch {
       toast.error('Failed to delete list')
@@ -97,7 +123,7 @@ export function ListsPage() {
     : null
 
   return (
-    <AppShell title="Task Lists">
+    <AppShell title="Lists">
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
@@ -123,6 +149,8 @@ export function ListsPage() {
                   list={list}
                   onEdit={setEditingList}
                   onActivate={handleActivate}
+                  onDeactivate={() => user && deactivateList(user.uid).then(() => toast.success('List deactivated')).catch(() => toast.error('Failed to deactivate'))}
+                  onDelete={handleDeleteListById}
                   isActive={activeList?.listId === list.id}
                 />
               ))}
@@ -157,7 +185,10 @@ export function ListsPage() {
         {currentEditingList && (
           <ListEditor
             list={currentEditingList}
+            isActive={activeList?.listId === currentEditingList.id}
             onUpdate={handleUpdate}
+            onActivate={() => handleActivate(currentEditingList)}
+            onDeactivate={() => user && deactivateList(user.uid).then(() => toast.success('List deactivated')).catch(() => toast.error('Failed to deactivate'))}
             onAddTask={handleAddTask}
             onUpdateTask={handleUpdateTask}
             onDeleteTask={handleDeleteTask}

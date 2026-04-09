@@ -17,7 +17,7 @@ interface ActiveState {
   subscribe: (userId: string) => () => void
   activateList: (userId: string, list: TaskList) => Promise<void>
   deactivateList: (userId: string) => Promise<void>
-  toggleTaskCompletion: (userId: string, taskId: string, completed: boolean) => Promise<void>
+  toggleTaskCompletion: (userId: string, taskId: string, completed: boolean, date?: string) => Promise<void>
   checkAndResetDailyTasks: (userId: string, timezone: string) => Promise<boolean>
   getProgress: () => { completed: number; total: number; percentage: number }
   getDayProgress: () => { currentDay: number; totalDays: number }
@@ -85,13 +85,13 @@ export const useActiveStore = create<ActiveState>((set, get) => ({
     }
   },
 
-  toggleTaskCompletion: async (userId, taskId, completed) => {
+  toggleTaskCompletion: async (userId, taskId, completed, date?: string) => {
     const { activeList } = get()
     if (!activeList) return
 
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      const today = getTodayDate(timezone)
+      const today = date ?? getTodayDate(timezone)
       const completions = activeList.taskCompletions[taskId] || []
 
       let updatedCompletions: TaskCompletion[]

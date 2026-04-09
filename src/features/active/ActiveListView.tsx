@@ -1,24 +1,21 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { useAuthStore, useListStore, useActiveStore } from '@/stores'
 import { Button, Modal, toast } from '@/components/ui'
 import type { ActiveList } from '@/types'
 import { ActiveTaskItem } from './ActiveTaskItem'
 import { ProgressRing } from './ProgressRing'
-import { useState } from 'react'
 
 interface ActiveListViewProps {
   activeList: ActiveList
 }
 
-// Get today's date in YYYY-MM-DD format
 function getTodayDate(timezone?: string): string {
   return new Date().toLocaleDateString('en-CA', {
     timeZone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
   })
 }
 
-// Calculate day number
 function getDayNumber(activatedAt: Timestamp | Date): number {
   const activated = activatedAt instanceof Timestamp ? activatedAt.toDate() : activatedAt
   const now = new Date()
@@ -26,69 +23,70 @@ function getDayNumber(activatedAt: Timestamp | Date): number {
   return Math.floor((now.getTime() - activated.getTime()) / msPerDay) + 1
 }
 
-// Check if list has expired
 function isExpired(activatedAt: Timestamp | Date, duration: number): boolean {
-  const dayNumber = getDayNumber(activatedAt)
-  return dayNumber > duration
+  return getDayNumber(activatedAt) > duration
+}
+
+function getDateForDay(activatedAt: Timestamp | Date, dayNum: number): string {
+  const activated = activatedAt instanceof Timestamp ? activatedAt.toDate() : activatedAt
+  const date = new Date(activated)
+  date.setDate(date.getDate() + dayNum - 1)
+  return date.toLocaleDateString('en-CA')
 }
 
 export function ActiveListView({ activeList }: ActiveListViewProps) {
   const { user, preferences } = useAuthStore()
-  const { lists } = useListStore()
+  const { lists, isLoading: listsLoading } = useListStore()
   const { toggleTaskCompletion, checkAndResetDailyTasks, deactivateList } = useActiveStore()
   const [showCompleteModal, setShowCompleteModal] = useState(false)
+  const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
-  // Get the actual list data
   const list = useMemo(() => {
     return lists.find((l) => l.id === activeList.listId)
   }, [lists, activeList.listId])
 
   const today = getTodayDate(preferences?.timezone)
 
-  // Check for daily reset on mount and when day changes
   useEffect(() => {
     if (!user || !preferences) return
     checkAndResetDailyTasks(user.uid, preferences.timezone)
   }, [user, preferences, checkAndResetDailyTasks, today])
 
-  if (!list) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-text-muted">List not found</p>
-      </div>
-    )
-  }
+  // Auto-deactivate if the referenced list has been deleted
+  useEffect(() => {
+    if (!listsLoading && !list && user) {
+      deactivateList(user.uid).catch(() => { })
+    }
+  }, [listsLoading, list, user, deactivateList])
+
+  if (!list) return null
 
   const dayNumber = getDayNumber(activeList.activatedAt)
   const expired = isExpired(activeList.activatedAt, list.duration)
 
-  // Calculate completion for today
-  const completedToday = list.tasks.filter((task) => {
-    const completions = activeList.taskCompletions[task.id] || []
-    // For daily reset tasks, only count today's completion
-    // For non-reset tasks, count if completed at any time
-    if (task.resetDaily) {
-      return completions.some((c) => c.date === today)
-    }
-    return completions.length > 0
-  }).length
+  // The day being viewed — defaults to today's day (capped at duration)
+  const viewingDay = selectedDay ?? Math.min(dayNumber, list.duration)
+  const viewingDate = getDateForDay(activeList.activatedAt, viewingDay)
+  const isViewingToday = viewingDate === today
 
-  const totalTasks = list.tasks.length
-  const progress = totalTasks > 0 ? (completedToday / totalTasks) * 100 : 0
-
-  // Check if task is completed for today
   function isTaskCompleted(taskId: string, resetDaily: boolean): boolean {
     const completions = activeList.taskCompletions[taskId] || []
     if (resetDaily) {
-      return completions.some((c) => c.date === today)
+      return completions.some((c) => c.date === viewingDate)
     }
     return completions.length > 0
   }
 
+  const completedCount = list.tasks.filter((task) =>
+    isTaskCompleted(task.id, task.resetDaily)
+  ).length
+  const totalTasks = list.tasks.length
+  const progress = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0
+
   async function handleToggle(taskId: string, completed: boolean) {
     if (!user) return
     try {
-      await toggleTaskCompletion(user.uid, taskId, completed)
+      await toggleTaskCompletion(user.uid, taskId, completed, viewingDate)
     } catch {
       toast.error('Failed to update task')
     }
@@ -104,7 +102,6 @@ export function ActiveListView({ activeList }: ActiveListViewProps) {
     }
   }
 
-  // Show completion modal when all tasks are done or list expired
   useEffect(() => {
     if (expired && !showCompleteModal) {
       setShowCompleteModal(true)
@@ -117,35 +114,58 @@ export function ActiveListView({ activeList }: ActiveListViewProps) {
       <div className="text-center">
         <h2 className="text-xl font-semibold mb-1">{list.title}</h2>
         <p className="text-text-muted text-sm mb-6">
-          Day {Math.min(dayNumber, list.duration)} of {list.duration}
+          Day {viewingDay} of {list.duration}
+          {!isViewingToday && (
+            <span className="ml-2 text-xs text-primary font-medium">
+              (today is Day {Math.min(dayNumber, list.duration)})
+            </span>
+          )}
         </p>
 
         <ProgressRing progress={progress} />
 
         <p className="mt-4 text-text-secondary">
-          {completedToday} of {totalTasks} tasks completed today
+          {completedCount} of {totalTasks} tasks completed
+          {isViewingToday ? ' today' : ` on Day ${viewingDay}`}
         </p>
       </div>
 
-      {/* Day progress bar */}
+      {/* Day selector */}
       <div className="bg-bg-secondary rounded-xl p-4">
         <div className="flex justify-between text-xs text-text-muted mb-2">
-          {Array.from({ length: list.duration }, (_, i) => (
-            <span
-              key={i}
-              className={`
-                w-8 h-8 rounded-full flex items-center justify-center font-medium
-                ${i + 1 < dayNumber
-                  ? 'bg-primary text-white'
-                  : i + 1 === dayNumber
-                    ? 'bg-primary/20 text-primary border-2 border-primary'
-                    : 'bg-bg-tertiary'
-                }
-              `}
-            >
-              {i + 1}
-            </span>
-          ))}
+          {Array.from({ length: list.duration }, (_, i) => {
+            const day = i + 1
+            const isToday = day === Math.min(dayNumber, list.duration) && today === getDateForDay(activeList.activatedAt, day)
+            const isPast = day < dayNumber
+            const isSelected = day === viewingDay
+
+            let classes = 'w-8 h-8 rounded-full flex items-center justify-center font-medium cursor-pointer transition-all '
+
+            if (isSelected && isToday) {
+              classes += 'bg-primary text-white ring-2 ring-primary ring-offset-2 ring-offset-bg-secondary'
+            } else if (isSelected && isPast) {
+              classes += 'bg-primary/40 text-primary ring-2 ring-primary ring-offset-2 ring-offset-bg-secondary'
+            } else if (isSelected) {
+              // Future day selected
+              classes += 'bg-bg-tertiary text-text-secondary ring-2 ring-primary ring-offset-2 ring-offset-bg-secondary'
+            } else if (isToday) {
+              classes += 'bg-primary text-white'
+            } else if (isPast) {
+              classes += 'bg-primary/20 text-primary'
+            } else {
+              classes += 'bg-bg-tertiary text-text-muted'
+            }
+
+            return (
+              <span
+                key={i}
+                className={classes}
+                onClick={() => setSelectedDay(day)}
+              >
+                {day}
+              </span>
+            )
+          })}
         </div>
       </div>
 
@@ -163,7 +183,7 @@ export function ActiveListView({ activeList }: ActiveListViewProps) {
 
       {/* Deactivate button */}
       <Button variant="ghost" onClick={handleDeactivate} className="w-full">
-        Stop List
+        Deactivate List
       </Button>
 
       {/* Completion modal */}

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Header } from './Header'
 import { BottomNav } from './BottomNav'
 import { ToastContainer } from '@/components/ui'
+import { useSwipeNavigation } from '@/hooks'
 
 interface AppShellProps {
   children: ReactNode
@@ -12,8 +13,14 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, title, showBack, onBack, hideNav }: AppShellProps) {
+  const { handleTouchStart, handleTouchEnd } = useSwipeNavigation()
+
   return (
-    <div className="min-h-screen bg-bg-primary">
+    <div
+      className="min-h-screen bg-bg-primary"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <Header title={title} showBack={showBack} onBack={onBack} />
       <main className={`max-w-lg mx-auto px-4 py-4 ${hideNav ? '' : 'pb-20'}`}>
         {children}
